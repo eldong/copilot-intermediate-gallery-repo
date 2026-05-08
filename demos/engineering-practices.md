@@ -90,6 +90,13 @@ GitHub.com provides additional tools for managing Copilot at the organizational 
 
 #### What to Explore
 - **Personal instructions:** Are there any preferences you'd like in the instructions? Test it out!
+  Example:
+- - Be concise and practical.
+- Prefer step-by-step checklists over long explanations.
+- Always include code examples when relevant.
+- Default to Azure and GitHub Actions examples unless I specify otherwise.
+- Call out tradeoffs and recommended approach first, then explanation.
+``
 
 ---
 
