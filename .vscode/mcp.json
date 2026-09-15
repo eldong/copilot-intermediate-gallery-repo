@@ -1,0 +1,9 @@
+{
+  "servers": {
+    // Using OAuth (version 1.101 or greater)
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  }
+}

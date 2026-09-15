@@ -1,0 +1,458 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+.page-gradient {
+  min-height: 100vh;
+  background: linear-gradient(to bottom right, #f8fafc, #e2e8f0);
+}
+
+@media (prefers-color-scheme: dark) {
+  .page-gradient {
+    background: linear-gradient(to bottom right, #0f172a, #1e293b);
+  }
+}
+
+/* ==========================================================================
+   UI Component Patterns - Standard CSS for compatibility
+   ========================================================================== */
+
+/* Card Patterns */
+.card-base {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-base {
+    background-color: #1e293b;
+  }
+}
+
+.card-elevated {
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-elevated:hover {
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-elevated {
+    background-color: #1e293b;
+  }
+}
+
+.card-feature {
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-feature {
+    background-color: #1e293b;
+  }
+}
+
+.card-stats {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-stats {
+    background-color: #1e293b;
+  }
+}
+
+/* Button Patterns */
+.btn-primary {
+  background-color: #2563eb;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: #f9fafb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-secondary {
+    border-color: #4b5563;
+    color: #d1d5db;
+  }
+  
+  .btn-secondary:hover {
+    background-color: #374151;
+  }
+}
+
+.btn-icon {
+  padding: 0.25rem;
+  color: #9ca3af;
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-icon:hover {
+  color: #2563eb;
+}
+
+.btn-icon-danger:hover {
+  color: #dc2626;
+}
+
+.btn-icon-success:hover {
+  color: #16a34a;
+}
+
+/* Navigation Links */
+.nav-link {
+  color: #4b5563;
+  font-weight: 500;
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+  .nav-link {
+    color: #d1d5db;
+  }
+  
+  .nav-link:hover {
+    color: #ffffff;
+  }
+}
+
+.nav-link-active {
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nav-link-active:hover {
+  color: #1d4ed8;
+}
+
+/* Form Elements */
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  color: #111827;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-input::placeholder {
+  color: #6b7280;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  .form-input,
+  .form-select {
+    border-color: #4b5563;
+    background-color: #374151;
+    color: #ffffff;
+  }
+  
+  .form-input::placeholder {
+    color: #9ca3af;
+  }
+}
+
+/* Status Elements */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-active {
+  background-color: #bbf7d0;
+  color: #14532d;
+}
+
+.status-private {
+  background-color: #e9d5ff;
+  color: #581c87;
+}
+
+.status-draft {
+  background-color: #fed7aa;
+  color: #9a3412;
+}
+
+@media (prefers-color-scheme: dark) {
+  .status-active {
+    background-color: #14532d;
+    color: #bbf7d0;
+  }
+  
+  .status-private {
+    background-color: #581c87;
+    color: #e9d5ff;
+  }
+  
+  .status-draft {
+    background-color: #9a3412;
+    color: #fed7aa;
+  }
+}
+
+/* Color System Classes */
+.icon-blue { color: #2563eb; }
+.icon-green { color: #16a34a; }
+.icon-purple { color: #9333ea; }
+.icon-orange { color: #ea580c; }
+.icon-red { color: #dc2626; }
+
+/* Icon Container Backgrounds */
+.icon-container-blue {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #dbeafe;
+}
+
+.icon-container-green {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #dcfce7;
+}
+
+.icon-container-purple {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3e8ff;
+}
+
+.icon-container-orange {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fed7aa;
+}
+
+@media (prefers-color-scheme: dark) {
+  .icon-container-blue { background-color: #1e3a8a; }
+  .icon-container-green { background-color: #14532d; }
+  .icon-container-purple { background-color: #581c87; }
+  .icon-container-orange { background-color: #9a3412; }
+}
+
+/* Hover Patterns */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: scale(1.01);
+}
+
+.hover-lift:active {
+  transform: scale(0.99);
+}
+
+.hover-bg {
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-bg:hover {
+  background-color: #f9fafb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .hover-bg:hover {
+    background-color: rgba(55, 65, 81, 0.5);
+  }
+}
+
+/* Progress Bar */
+.progress-bar {
+  width: 100%;
+  background-color: #e5e7eb;
+  border-radius: 9999px;
+  height: 0.5rem;
+}
+
+.progress-fill {
+  background-color: #3b82f6;
+  height: 0.5rem;
+  border-radius: 9999px;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .progress-bar {
+    background-color: #374151;
+  }
+}
+
+/* Drag and Drop */
+.drop-zone {
+  border: 2px dashed #d1d5db;
+  border-radius: 0.75rem;
+  padding: 3rem;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.drop-zone-active {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.drop-zone-inactive:hover {
+  border-color: #60a5fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  .drop-zone {
+    border-color: #4b5563;
+  }
+  
+  .drop-zone-active {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+  
+  .drop-zone-inactive:hover {
+    border-color: #3b82f6;
+  }
+}
+
+/* Table Patterns */
+.table-row {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.table-row:hover {
+  background-color: #f9fafb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .table-row {
+    border-color: #374151;
+  }
+  
+  .table-row:hover {
+    background-color: rgba(55, 65, 81, 0.5);
+  }
+}
+
+/* Additional Button Variations */
+.btn-primary.flex-1 {
+  flex: 1;
+}
+
+.btn-secondary.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* Card with custom padding */
+.card-base.p-6 {
+  padding: 1.5rem;
+}
+
+/* Gallery specific styles */
+.gallery-card {
+  position: relative;
+  overflow: hidden;
+  background-color: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gallery-card:hover {
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .gallery-card {
+    background-color: #1e293b;
+  }
+}
