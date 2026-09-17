@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Heart, Download, Share2, Eye, Tag } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { AlertCircle, CheckCircle, Heart, Download, Loader2, Share2, Eye, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Photo, mockPhotos } from '@/lib/mock-photo-data';
+import { PhotoDownloadError, downloadPhoto } from '@/lib/photo-download';
+
+const DOWNLOAD_STATUS_RESET_DELAY_MS = 4000;
 
 interface GalleryGridProps {
   limit?: number;
@@ -13,6 +16,62 @@ interface GalleryGridProps {
   selectedTags?: string[];
   searchQuery?: string;
   currentPage?: number;
+}
+
+interface DownloadStatus {
+  type: 'success' | 'error';
+  message: string;
+}
+
+interface DownloadStatusMessageProps {
+  status: DownloadStatus | null;
+  variant: 'card' | 'inline';
+}
+
+function DownloadStatusMessage({ status, variant }: DownloadStatusMessageProps) {
+  if (!status) {
+    return null;
+  }
+
+  const isSuccess = status.type === 'success';
+  const colorClasses = isSuccess
+    ? 'text-green-600 dark:text-green-300'
+    : 'text-red-600 dark:text-red-300';
+
+  return (
+    <div
+      className={
+        variant === 'card'
+          ? `mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${
+              isSuccess
+                ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+            }`
+          : `flex items-center gap-2 text-sm ${colorClasses}`
+      }
+      role={isSuccess ? 'status' : 'alert'}
+    >
+      {isSuccess ? (
+        <CheckCircle className={`${variant === 'card' ? 'mt-0.5 ' : ''}h-4 w-4 flex-shrink-0`} />
+      ) : (
+        <AlertCircle className={`${variant === 'card' ? 'mt-0.5 ' : ''}h-4 w-4 flex-shrink-0`} />
+      )}
+      <span>{status.message}</span>
+    </div>
+  );
+}
+
+function getDownloadCount(photo: Photo, sessionDownloadIncrements: Record<string, number>): number {
+  return photo.downloads + (sessionDownloadIncrements[photo.id] ?? 0);
+}
+
+function removeDownloadStatus(
+  statuses: Record<string, DownloadStatus>,
+  photoId: string
+): Record<string, DownloadStatus> {
+  const next = { ...statuses };
+  delete next[photoId];
+  return next;
 }
 
 export function GalleryGrid({ 
@@ -26,6 +85,20 @@ export function GalleryGrid({
 }: GalleryGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [likedPhotos, setLikedPhotos] = useState<Set<string>>(new Set());
+  const [sessionDownloadIncrements, setSessionDownloadIncrements] = useState<Record<string, number>>({});
+  const [inProgressDownloadIds, setInProgressDownloadIds] = useState<Set<string>>(new Set());
+  const [downloadStatuses, setDownloadStatuses] = useState<Record<string, DownloadStatus>>({});
+  const downloadStatusTimeouts = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const timeouts = downloadStatusTimeouts.current;
+
+    return () => {
+      Object.values(timeouts).forEach(timeoutId => {
+        window.clearTimeout(timeoutId);
+      });
+    };
+  }, []);
 
   // Filter photos based on selected tags and search query
   const filteredPhotos = mockPhotos.filter(photo => {
@@ -44,11 +117,8 @@ export function GalleryGrid({
 
   // Calculate pagination
   const totalPhotos = filteredPhotos.length;
-  const photosPerPage = limit;
-  const totalPages = Math.ceil(totalPhotos / photosPerPage);
-  const startIndex = 0;
-  const endIndex = currentPage * photosPerPage;
-  const displayedPhotos = filteredPhotos.slice(startIndex, endIndex);
+  const endIndex = currentPage * limit;
+  const displayedPhotos = filteredPhotos.slice(0, endIndex);
   const hasMore = endIndex < totalPhotos;
 
   const toggleLike = (photoId: string) => {
@@ -61,6 +131,65 @@ export function GalleryGrid({
       }
       return newLiked;
     });
+  };
+
+  const clearDownloadStatus = (photoId: string) => {
+    const timeoutId = downloadStatusTimeouts.current[photoId];
+
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      delete downloadStatusTimeouts.current[photoId];
+    }
+
+    setDownloadStatuses(prev => removeDownloadStatus(prev, photoId));
+  };
+
+  const setTimedDownloadStatus = (photoId: string, status: DownloadStatus) => {
+    clearDownloadStatus(photoId);
+
+    setDownloadStatuses(prev => ({
+      ...prev,
+      [photoId]: status,
+    }));
+
+    downloadStatusTimeouts.current[photoId] = window.setTimeout(() => {
+      setDownloadStatuses(prev => removeDownloadStatus(prev, photoId));
+      delete downloadStatusTimeouts.current[photoId];
+    }, DOWNLOAD_STATUS_RESET_DELAY_MS);
+  };
+
+  const handleDownload = async (photo: Photo) => {
+    if (inProgressDownloadIds.has(photo.id)) {
+      return;
+    }
+
+    clearDownloadStatus(photo.id);
+    setInProgressDownloadIds(prev => new Set(prev).add(photo.id));
+
+    try {
+      await downloadPhoto({ url: photo.url, title: photo.title });
+      setSessionDownloadIncrements(prev => ({
+        ...prev,
+        [photo.id]: (prev[photo.id] ?? 0) + 1,
+      }));
+      setTimedDownloadStatus(photo.id, {
+        type: 'success',
+        message: `${photo.title} is ready in your downloads.`,
+      });
+    } catch (error) {
+      setTimedDownloadStatus(photo.id, {
+        type: 'error',
+        message: error instanceof PhotoDownloadError
+          ? error.message
+          : 'Unable to download this photo. Please try again.',
+      });
+    } finally {
+      setInProgressDownloadIds(prev => {
+        const next = new Set(prev);
+        next.delete(photo.id);
+        return next;
+      });
+    }
   };
 
   return (
@@ -113,10 +242,22 @@ export function GalleryGrid({
                 >
                   <Heart className={`h-4 w-4 ${likedPhotos.has(photo.id) ? 'fill-current' : ''}`} />
                 </button>
-                <button className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors">
-                  <Download className="h-4 w-4" />
+                <button
+                  onClick={() => handleDownload(photo)}
+                  disabled={inProgressDownloadIds.has(photo.id)}
+                  aria-label={`Download ${photo.title}`}
+                  className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {inProgressDownloadIds.has(photo.id) ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                 </button>
-                <button className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors">
+                <button
+                  aria-label={`Share ${photo.title}`}
+                  className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors"
+                >
                   <Share2 className="h-4 w-4" />
                 </button>
               </div>
@@ -159,10 +300,12 @@ export function GalleryGrid({
                   </span>
                   <span className="flex items-center gap-1">
                     <Download className="h-4 w-4" />
-                    {photo.downloads}
+                    {getDownloadCount(photo, sessionDownloadIncrements)}
                   </span>
                 </div>
               </div>
+
+              <DownloadStatusMessage status={downloadStatuses[photo.id] ?? null} variant="card" />
 
               {/* Photographer */}
               {photo.photographer && (
@@ -227,6 +370,21 @@ export function GalleryGrid({
               <p className="text-slate-600 dark:text-slate-400">
                 Photo details and larger view would be implemented here.
               </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  onClick={() => handleDownload(selectedPhoto)}
+                  disabled={inProgressDownloadIds.has(selectedPhoto.id)}
+                  className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {inProgressDownloadIds.has(selectedPhoto.id) ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  {inProgressDownloadIds.has(selectedPhoto.id) ? 'Downloading...' : 'Download Photo'}
+                </button>
+                <DownloadStatusMessage status={downloadStatuses[selectedPhoto.id] ?? null} variant="inline" />
+              </div>
             </div>
           </div>
         </div>
