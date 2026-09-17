@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, CheckCircle, Heart, Download, Loader2, Share2, Eye, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Photo, mockPhotos } from '@/lib/mock-photo-data';
@@ -20,18 +20,16 @@ interface GalleryGridProps {
 
 interface DownloadStatus {
   type: 'success' | 'error';
-  photoId: string;
   message: string;
 }
 
 interface DownloadStatusMessageProps {
   status: DownloadStatus | null;
-  photoId: string;
   variant: 'card' | 'inline';
 }
 
-function DownloadStatusMessage({ status, photoId, variant }: DownloadStatusMessageProps) {
-  if (status?.photoId !== photoId) {
+function DownloadStatusMessage({ status, variant }: DownloadStatusMessageProps) {
+  if (!status) {
     return null;
   }
 
@@ -63,6 +61,15 @@ function DownloadStatusMessage({ status, photoId, variant }: DownloadStatusMessa
   );
 }
 
+function removeDownloadStatus(
+  statuses: Record<string, DownloadStatus>,
+  photoId: string
+): Record<string, DownloadStatus> {
+  const next = { ...statuses };
+  delete next[photoId];
+  return next;
+}
+
 export function GalleryGrid({ 
   limit = 6, 
   className = "", 
@@ -76,19 +83,18 @@ export function GalleryGrid({
   const [likedPhotos, setLikedPhotos] = useState<Set<string>>(new Set());
   const [downloadCounts, setDownloadCounts] = useState<Record<string, number>>({});
   const [inProgressDownloadIds, setInProgressDownloadIds] = useState<Set<string>>(new Set());
-  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(null);
+  const [downloadStatuses, setDownloadStatuses] = useState<Record<string, DownloadStatus>>({});
+  const downloadStatusTimeouts = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    if (!downloadStatus) {
-      return;
-    }
+    const timeouts = downloadStatusTimeouts.current;
 
-    const timeoutId = window.setTimeout(() => {
-      setDownloadStatus(null);
-    }, DOWNLOAD_STATUS_RESET_DELAY_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [downloadStatus]);
+    return () => {
+      Object.values(timeouts).forEach(timeoutId => {
+        window.clearTimeout(timeoutId);
+      });
+    };
+  }, []);
 
   // Filter photos based on selected tags and search query
   const filteredPhotos = mockPhotos.filter(photo => {
@@ -107,10 +113,8 @@ export function GalleryGrid({
 
   // Calculate pagination
   const totalPhotos = filteredPhotos.length;
-  const photosPerPage = limit;
-  const startIndex = 0;
-  const endIndex = currentPage * photosPerPage;
-  const displayedPhotos = filteredPhotos.slice(startIndex, endIndex);
+  const endIndex = currentPage * limit;
+  const displayedPhotos = filteredPhotos.slice(0, endIndex);
   const hasMore = endIndex < totalPhotos;
 
   const toggleLike = (photoId: string) => {
@@ -125,12 +129,37 @@ export function GalleryGrid({
     });
   };
 
+  const clearDownloadStatus = (photoId: string) => {
+    const timeoutId = downloadStatusTimeouts.current[photoId];
+
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      delete downloadStatusTimeouts.current[photoId];
+    }
+
+    setDownloadStatuses(prev => removeDownloadStatus(prev, photoId));
+  };
+
+  const setTimedDownloadStatus = (photoId: string, status: DownloadStatus) => {
+    clearDownloadStatus(photoId);
+
+    setDownloadStatuses(prev => ({
+      ...prev,
+      [photoId]: status,
+    }));
+
+    downloadStatusTimeouts.current[photoId] = window.setTimeout(() => {
+      setDownloadStatuses(prev => removeDownloadStatus(prev, photoId));
+      delete downloadStatusTimeouts.current[photoId];
+    }, DOWNLOAD_STATUS_RESET_DELAY_MS);
+  };
+
   const handleDownload = async (photo: Photo) => {
     if (inProgressDownloadIds.has(photo.id)) {
       return;
     }
 
-    setDownloadStatus(null);
+    clearDownloadStatus(photo.id);
     setInProgressDownloadIds(prev => new Set(prev).add(photo.id));
 
     try {
@@ -139,15 +168,13 @@ export function GalleryGrid({
         ...prev,
         [photo.id]: (prev[photo.id] ?? 0) + 1,
       }));
-      setDownloadStatus({
+      setTimedDownloadStatus(photo.id, {
         type: 'success',
-        photoId: photo.id,
         message: `${photo.title} is ready in your downloads.`,
       });
     } catch (error) {
-      setDownloadStatus({
+      setTimedDownloadStatus(photo.id, {
         type: 'error',
-        photoId: photo.id,
         message: error instanceof PhotoDownloadError
           ? error.message
           : 'Unable to download this photo. Please try again.',
@@ -223,7 +250,10 @@ export function GalleryGrid({
                     <Download className="h-4 w-4" />
                   )}
                 </button>
-                <button className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors">
+                <button
+                  aria-label={`Share ${photo.title}`}
+                  className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors"
+                >
                   <Share2 className="h-4 w-4" />
                 </button>
               </div>
@@ -271,7 +301,7 @@ export function GalleryGrid({
                 </div>
               </div>
 
-              <DownloadStatusMessage status={downloadStatus} photoId={photo.id} variant="card" />
+              <DownloadStatusMessage status={downloadStatuses[photo.id] ?? null} variant="card" />
 
               {/* Photographer */}
               {photo.photographer && (
@@ -349,7 +379,7 @@ export function GalleryGrid({
                   )}
                   {inProgressDownloadIds.has(selectedPhoto.id) ? 'Downloading...' : 'Download Photo'}
                 </button>
-                <DownloadStatusMessage status={downloadStatus} photoId={selectedPhoto.id} variant="inline" />
+                <DownloadStatusMessage status={downloadStatuses[selectedPhoto.id] ?? null} variant="inline" />
               </div>
             </div>
           </div>

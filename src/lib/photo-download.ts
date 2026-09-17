@@ -35,13 +35,25 @@ export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promi
     throw new PhotoDownloadError('Photo downloads are only available in the browser.');
   }
 
-  const response = await fetch(url);
+  let response: Response;
+
+  try {
+    response = await fetch(url);
+  } catch {
+    throw new PhotoDownloadError('Unable to download this photo. Please try again.');
+  }
 
   if (!response.ok) {
     throw new PhotoDownloadError('Unable to download this photo. Please try again.');
   }
 
-  const blob = await response.blob();
+  let blob: Blob;
+
+  try {
+    blob = await response.blob();
+  } catch {
+    throw new PhotoDownloadError('Unable to download this photo. Please try again.');
+  }
   const objectUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
 
