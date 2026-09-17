@@ -47,7 +47,7 @@ export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promi
   document.body.appendChild(link);
   link.click();
   link.remove();
-  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0);
+  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 500);
 }
 
 function getPhotoDownloadFileName(title: string, contentType: string, sourceUrl: string): string {

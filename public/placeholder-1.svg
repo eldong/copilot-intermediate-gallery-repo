@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
-  <title id="title">Sunset Landscape</title>
-  <desc id="desc">Downloadable placeholder image for Sunset Landscape.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title-1 desc-1">
+  <title id="title-1">Sunset Landscape</title>
+  <desc id="desc-1">Downloadable placeholder image for Sunset Landscape.</desc>
   <defs>
-    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="gradient-1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#60a5fa" />
       <stop offset="100%" stop-color="#2563eb" />
     </linearGradient>
   </defs>
-  <rect width="1200" height="900" fill="url(#gradient)" />
+  <rect width="1200" height="900" fill="url(#gradient-1)" />
   <circle cx="960" cy="180" r="90" fill="rgba(255,255,255,0.28)" />
   <path d="M0 690 L260 480 L450 620 L650 390 L1200 760 L1200 900 L0 900 Z" fill="rgba(15,23,42,0.25)" />
   <text x="600" y="430" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="56" font-weight="700">Sunset Landscape</text>

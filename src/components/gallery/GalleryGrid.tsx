@@ -72,7 +72,7 @@ export function GalleryGrid({
 }: GalleryGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [likedPhotos, setLikedPhotos] = useState<Set<string>>(new Set());
-  const [completedDownloadIds, setCompletedDownloadIds] = useState<Set<string>>(new Set());
+  const [downloadCounts, setDownloadCounts] = useState<Record<string, number>>({});
   const [inProgressDownloadIds, setInProgressDownloadIds] = useState<Set<string>>(new Set());
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(null);
 
@@ -121,7 +121,10 @@ export function GalleryGrid({
 
     try {
       await downloadPhoto({ url: photo.url, title: photo.title });
-      setCompletedDownloadIds(prev => new Set(prev).add(photo.id));
+      setDownloadCounts(prev => ({
+        ...prev,
+        [photo.id]: (prev[photo.id] ?? 0) + 1,
+      }));
       setDownloadStatus({
         type: 'success',
         photoId: photo.id,
@@ -249,7 +252,7 @@ export function GalleryGrid({
                   </span>
                   <span className="flex items-center gap-1">
                     <Download className="h-4 w-4" />
-                    {photo.downloads + (completedDownloadIds.has(photo.id) ? 1 : 0)}
+                    {photo.downloads + (downloadCounts[photo.id] ?? 0)}
                   </span>
                 </div>
               </div>
