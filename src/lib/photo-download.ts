@@ -18,6 +18,11 @@ export class PhotoDownloadError extends Error {
   }
 }
 
+/**
+ * Downloads a browser-accessible photo URL using a generated file name from the
+ * photo title and response type. Throws PhotoDownloadError when the URL cannot
+ * be fetched or when called outside the browser.
+ */
 export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promise<void> {
   if (!url.trim()) {
     throw new PhotoDownloadError('This photo does not have a download URL.');
@@ -42,7 +47,7 @@ export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promi
   document.body.appendChild(link);
   link.click();
   link.remove();
-  window.URL.revokeObjectURL(objectUrl);
+  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0);
 }
 
 function getPhotoDownloadFileName(title: string, contentType: string, sourceUrl: string): string {

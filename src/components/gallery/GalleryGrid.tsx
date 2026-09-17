@@ -16,6 +16,51 @@ interface GalleryGridProps {
   currentPage?: number;
 }
 
+interface DownloadStatus {
+  type: 'success' | 'error';
+  photoId: string;
+  message: string;
+}
+
+interface DownloadStatusMessageProps {
+  status: DownloadStatus | null;
+  photoId: string;
+  variant: 'card' | 'inline';
+}
+
+function DownloadStatusMessage({ status, photoId, variant }: DownloadStatusMessageProps) {
+  if (status?.photoId !== photoId) {
+    return null;
+  }
+
+  const isSuccess = status.type === 'success';
+  const colorClasses = isSuccess
+    ? 'text-green-600 dark:text-green-300'
+    : 'text-red-600 dark:text-red-300';
+
+  return (
+    <div
+      className={
+        variant === 'card'
+          ? `mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${
+              isSuccess
+                ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+            }`
+          : `flex items-center gap-2 text-sm ${colorClasses}`
+      }
+      role={isSuccess ? 'status' : 'alert'}
+    >
+      {isSuccess ? (
+        <CheckCircle className={`${variant === 'card' ? 'mt-0.5 ' : ''}h-4 w-4 flex-shrink-0`} />
+      ) : (
+        <AlertCircle className={`${variant === 'card' ? 'mt-0.5 ' : ''}h-4 w-4 flex-shrink-0`} />
+      )}
+      <span>{status.message}</span>
+    </div>
+  );
+}
+
 export function GalleryGrid({ 
   limit = 6, 
   className = "", 
@@ -27,13 +72,9 @@ export function GalleryGrid({
 }: GalleryGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [likedPhotos, setLikedPhotos] = useState<Set<string>>(new Set());
-  const [downloadedPhotos, setDownloadedPhotos] = useState<Set<string>>(new Set());
-  const [downloadingPhotos, setDownloadingPhotos] = useState<Set<string>>(new Set());
-  const [downloadStatus, setDownloadStatus] = useState<{
-    type: 'success' | 'error';
-    photoId: string;
-    message: string;
-  } | null>(null);
+  const [completedDownloadIds, setCompletedDownloadIds] = useState<Set<string>>(new Set());
+  const [inProgressDownloadIds, setInProgressDownloadIds] = useState<Set<string>>(new Set());
+  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(null);
 
   // Filter photos based on selected tags and search query
   const filteredPhotos = mockPhotos.filter(photo => {
@@ -71,16 +112,16 @@ export function GalleryGrid({
   };
 
   const handleDownload = async (photo: Photo) => {
-    if (downloadingPhotos.has(photo.id)) {
+    if (inProgressDownloadIds.has(photo.id)) {
       return;
     }
 
     setDownloadStatus(null);
-    setDownloadingPhotos(prev => new Set(prev).add(photo.id));
+    setInProgressDownloadIds(prev => new Set(prev).add(photo.id));
 
     try {
       await downloadPhoto({ url: photo.url, title: photo.title });
-      setDownloadedPhotos(prev => new Set(prev).add(photo.id));
+      setCompletedDownloadIds(prev => new Set(prev).add(photo.id));
       setDownloadStatus({
         type: 'success',
         photoId: photo.id,
@@ -95,7 +136,7 @@ export function GalleryGrid({
           : 'Unable to download this photo. Please try again.',
       });
     } finally {
-      setDownloadingPhotos(prev => {
+      setInProgressDownloadIds(prev => {
         const next = new Set(prev);
         next.delete(photo.id);
         return next;
@@ -155,11 +196,11 @@ export function GalleryGrid({
                 </button>
                 <button
                   onClick={() => handleDownload(photo)}
-                  disabled={downloadingPhotos.has(photo.id)}
+                  disabled={inProgressDownloadIds.has(photo.id)}
                   aria-label={`Download ${photo.title}`}
                   className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {downloadingPhotos.has(photo.id) ? (
+                  {inProgressDownloadIds.has(photo.id) ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Download className="h-4 w-4" />
@@ -208,28 +249,12 @@ export function GalleryGrid({
                   </span>
                   <span className="flex items-center gap-1">
                     <Download className="h-4 w-4" />
-                    {photo.downloads + (downloadedPhotos.has(photo.id) ? 1 : 0)}
+                    {photo.downloads + (completedDownloadIds.has(photo.id) ? 1 : 0)}
                   </span>
                 </div>
               </div>
 
-              {downloadStatus?.photoId === photo.id && (
-                <div
-                  className={`mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${
-                    downloadStatus.type === 'success'
-                      ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300'
-                      : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
-                  }`}
-                  role={downloadStatus.type === 'error' ? 'alert' : 'status'}
-                >
-                  {downloadStatus.type === 'success' ? (
-                    <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                  ) : (
-                    <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                  )}
-                  <span>{downloadStatus.message}</span>
-                </div>
-              )}
+              <DownloadStatusMessage status={downloadStatus} photoId={photo.id} variant="card" />
 
               {/* Photographer */}
               {photo.photographer && (
@@ -297,33 +322,17 @@ export function GalleryGrid({
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   onClick={() => handleDownload(selectedPhoto)}
-                  disabled={downloadingPhotos.has(selectedPhoto.id)}
+                  disabled={inProgressDownloadIds.has(selectedPhoto.id)}
                   className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {downloadingPhotos.has(selectedPhoto.id) ? (
+                  {inProgressDownloadIds.has(selectedPhoto.id) ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Download className="h-4 w-4" />
                   )}
-                  {downloadingPhotos.has(selectedPhoto.id) ? 'Downloading...' : 'Download Photo'}
+                  {inProgressDownloadIds.has(selectedPhoto.id) ? 'Downloading...' : 'Download Photo'}
                 </button>
-                {downloadStatus?.photoId === selectedPhoto.id && (
-                  <div
-                    className={`flex items-center gap-2 text-sm ${
-                      downloadStatus.type === 'success'
-                        ? 'text-green-600 dark:text-green-300'
-                        : 'text-red-600 dark:text-red-300'
-                    }`}
-                    role={downloadStatus.type === 'error' ? 'alert' : 'status'}
-                  >
-                    {downloadStatus.type === 'success' ? (
-                      <CheckCircle className="h-4 w-4" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4" />
-                    )}
-                    <span>{downloadStatus.message}</span>
-                  </div>
-                )}
+                <DownloadStatusMessage status={downloadStatus} photoId={selectedPhoto.id} variant="inline" />
               </div>
             </div>
           </div>
