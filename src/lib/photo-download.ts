@@ -11,6 +11,9 @@ const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
   'image/svg+xml': 'svg',
 };
 
+// Give the browser time to start the download before revoking the object URL.
+const OBJECT_URL_REVOKE_DELAY_MS = 500;
+
 export class PhotoDownloadError extends Error {
   constructor(message: string) {
     super(message);
@@ -47,7 +50,7 @@ export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promi
   document.body.appendChild(link);
   link.click();
   link.remove();
-  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 500);
+  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), OBJECT_URL_REVOKE_DELAY_MS);
 }
 
 function getPhotoDownloadFileName(title: string, contentType: string, sourceUrl: string): string {

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle, Heart, Download, Loader2, Share2, Eye, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Photo, mockPhotos } from '@/lib/mock-photo-data';
 import { PhotoDownloadError, downloadPhoto } from '@/lib/photo-download';
+
+const DOWNLOAD_STATUS_RESET_DELAY_MS = 4000;
 
 interface GalleryGridProps {
   limit?: number;
@@ -75,6 +77,18 @@ export function GalleryGrid({
   const [downloadCounts, setDownloadCounts] = useState<Record<string, number>>({});
   const [inProgressDownloadIds, setInProgressDownloadIds] = useState<Set<string>>(new Set());
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus | null>(null);
+
+  useEffect(() => {
+    if (!downloadStatus) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setDownloadStatus(null);
+    }, DOWNLOAD_STATUS_RESET_DELAY_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [downloadStatus]);
 
   // Filter photos based on selected tags and search query
   const filteredPhotos = mockPhotos.filter(photo => {
