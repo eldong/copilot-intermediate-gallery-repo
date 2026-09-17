@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, Download, Share2, Eye, Tag } from 'lucide-react';
+import { AlertCircle, CheckCircle, Heart, Download, Loader2, Share2, Eye, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Photo, mockPhotos } from '@/lib/mock-photo-data';
+import { PhotoDownloadError, downloadPhoto } from '@/lib/photo-download';
 
 interface GalleryGridProps {
   limit?: number;
@@ -26,6 +27,13 @@ export function GalleryGrid({
 }: GalleryGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [likedPhotos, setLikedPhotos] = useState<Set<string>>(new Set());
+  const [downloadedPhotos, setDownloadedPhotos] = useState<Set<string>>(new Set());
+  const [downloadingPhotos, setDownloadingPhotos] = useState<Set<string>>(new Set());
+  const [downloadStatus, setDownloadStatus] = useState<{
+    type: 'success' | 'error';
+    photoId: string;
+    message: string;
+  } | null>(null);
 
   // Filter photos based on selected tags and search query
   const filteredPhotos = mockPhotos.filter(photo => {
@@ -61,6 +69,39 @@ export function GalleryGrid({
       }
       return newLiked;
     });
+  };
+
+  const handleDownload = async (photo: Photo) => {
+    if (downloadingPhotos.has(photo.id)) {
+      return;
+    }
+
+    setDownloadStatus(null);
+    setDownloadingPhotos(prev => new Set(prev).add(photo.id));
+
+    try {
+      await downloadPhoto({ url: photo.url, title: photo.title });
+      setDownloadedPhotos(prev => new Set(prev).add(photo.id));
+      setDownloadStatus({
+        type: 'success',
+        photoId: photo.id,
+        message: `${photo.title} is ready in your downloads.`,
+      });
+    } catch (error) {
+      setDownloadStatus({
+        type: 'error',
+        photoId: photo.id,
+        message: error instanceof PhotoDownloadError
+          ? error.message
+          : 'Unable to download this photo. Please try again.',
+      });
+    } finally {
+      setDownloadingPhotos(prev => {
+        const next = new Set(prev);
+        next.delete(photo.id);
+        return next;
+      });
+    }
   };
 
   return (
@@ -113,8 +154,17 @@ export function GalleryGrid({
                 >
                   <Heart className={`h-4 w-4 ${likedPhotos.has(photo.id) ? 'fill-current' : ''}`} />
                 </button>
-                <button className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors">
-                  <Download className="h-4 w-4" />
+                <button
+                  onClick={() => handleDownload(photo)}
+                  disabled={downloadingPhotos.has(photo.id)}
+                  aria-label={`Download ${photo.title}`}
+                  className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {downloadingPhotos.has(photo.id) ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
                 </button>
                 <button className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors">
                   <Share2 className="h-4 w-4" />
@@ -159,10 +209,28 @@ export function GalleryGrid({
                   </span>
                   <span className="flex items-center gap-1">
                     <Download className="h-4 w-4" />
-                    {photo.downloads}
+                    {photo.downloads + (downloadedPhotos.has(photo.id) ? 1 : 0)}
                   </span>
                 </div>
               </div>
+
+              {downloadStatus?.photoId === photo.id && (
+                <div
+                  className={`mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${
+                    downloadStatus.type === 'success'
+                      ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+                      : 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                  }`}
+                  role={downloadStatus.type === 'error' ? 'alert' : 'status'}
+                >
+                  {downloadStatus.type === 'success' ? (
+                    <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  )}
+                  <span>{downloadStatus.message}</span>
+                </div>
+              )}
 
               {/* Photographer */}
               {photo.photographer && (
@@ -227,6 +295,37 @@ export function GalleryGrid({
               <p className="text-slate-600 dark:text-slate-400">
                 Photo details and larger view would be implemented here.
               </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  onClick={() => handleDownload(selectedPhoto)}
+                  disabled={downloadingPhotos.has(selectedPhoto.id)}
+                  className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {downloadingPhotos.has(selectedPhoto.id) ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  {downloadingPhotos.has(selectedPhoto.id) ? 'Downloading...' : 'Download Photo'}
+                </button>
+                {downloadStatus?.photoId === selectedPhoto.id && (
+                  <div
+                    className={`flex items-center gap-2 text-sm ${
+                      downloadStatus.type === 'success'
+                        ? 'text-green-600 dark:text-green-300'
+                        : 'text-red-600 dark:text-red-300'
+                    }`}
+                    role={downloadStatus.type === 'error' ? 'alert' : 'status'}
+                  >
+                    {downloadStatus.type === 'success' ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <span>{downloadStatus.message}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
