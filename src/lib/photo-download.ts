@@ -66,11 +66,12 @@ export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promi
 }
 
 function getPhotoDownloadFileName(title: string, contentType: string, sourceUrl: string): string {
-  const safeTitle = title
+  const sanitizedTitle = title
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'photo';
+    .replace(/^-+|-+$/g, '');
+  const safeTitle = sanitizedTitle || 'photo';
 
   return `${safeTitle}.${getFileExtension(contentType, sourceUrl)}`;
 }

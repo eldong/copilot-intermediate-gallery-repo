@@ -61,6 +61,10 @@ function DownloadStatusMessage({ status, variant }: DownloadStatusMessageProps) 
   );
 }
 
+function getDownloadCount(photo: Photo, sessionDownloadIncrements: Record<string, number>): number {
+  return photo.downloads + (sessionDownloadIncrements[photo.id] ?? 0);
+}
+
 function removeDownloadStatus(
   statuses: Record<string, DownloadStatus>,
   photoId: string
@@ -81,7 +85,7 @@ export function GalleryGrid({
 }: GalleryGridProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [likedPhotos, setLikedPhotos] = useState<Set<string>>(new Set());
-  const [downloadCounts, setDownloadCounts] = useState<Record<string, number>>({});
+  const [sessionDownloadIncrements, setSessionDownloadIncrements] = useState<Record<string, number>>({});
   const [inProgressDownloadIds, setInProgressDownloadIds] = useState<Set<string>>(new Set());
   const [downloadStatuses, setDownloadStatuses] = useState<Record<string, DownloadStatus>>({});
   const downloadStatusTimeouts = useRef<Record<string, number>>({});
@@ -164,7 +168,7 @@ export function GalleryGrid({
 
     try {
       await downloadPhoto({ url: photo.url, title: photo.title });
-      setDownloadCounts(prev => ({
+      setSessionDownloadIncrements(prev => ({
         ...prev,
         [photo.id]: (prev[photo.id] ?? 0) + 1,
       }));
@@ -296,7 +300,7 @@ export function GalleryGrid({
                   </span>
                   <span className="flex items-center gap-1">
                     <Download className="h-4 w-4" />
-                    {photo.downloads + (downloadCounts[photo.id] ?? 0)}
+                    {getDownloadCount(photo, sessionDownloadIncrements)}
                   </span>
                 </div>
               </div>
