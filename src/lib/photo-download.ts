@@ -11,6 +11,8 @@ const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
   'image/svg+xml': 'svg',
 };
 
+const DOWNLOAD_FAILURE_MESSAGE = 'Unable to download this photo. Please try again.';
+
 // Give the browser time to start the download before revoking the object URL.
 const OBJECT_URL_REVOKE_DELAY_MS = 500;
 
@@ -40,11 +42,11 @@ export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promi
   try {
     response = await fetch(url);
   } catch {
-    throw new PhotoDownloadError('Unable to download this photo. Please try again.');
+    throw new PhotoDownloadError(DOWNLOAD_FAILURE_MESSAGE);
   }
 
   if (!response.ok) {
-    throw new PhotoDownloadError('Unable to download this photo. Please try again.');
+    throw new PhotoDownloadError(DOWNLOAD_FAILURE_MESSAGE);
   }
 
   let blob: Blob;
@@ -52,7 +54,7 @@ export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promi
   try {
     blob = await response.blob();
   } catch {
-    throw new PhotoDownloadError('Unable to download this photo. Please try again.');
+    throw new PhotoDownloadError(DOWNLOAD_FAILURE_MESSAGE);
   }
   const objectUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
