@@ -66,8 +66,8 @@ Once ready, you can access the application at the forwarded port URL provided in
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/ps-copilot-sandbox/copilot-intermediate-gallery-repo.git
-   cd gallery-repo
+   git clone https://github.com/eldong/copilot-intermediate-gallery-repo.git
+   cd copilot-intermediate-gallery-repo
    ```
 2. Install dependencies:
    ```bash
@@ -83,8 +83,22 @@ Once ready, you can access the application at the forwarded port URL provided in
 
 ```bash
 src/
-├── app/                 # Next.js 15 App Router pages
-├── components/          # Reusable React components
-├── lib/                 # Utility functions and helpers
-demos/                   # Demo guides and templates
+├── app/                    # Next.js 15 App Router pages
+│   ├── page.tsx            # Home page
+│   ├── gallery/page.tsx    # Gallery page with search/filtering
+│   ├── upload/page.tsx     # Upload page
+│   └── admin/page.tsx      # Admin dashboard page
+├── components/
+│   ├── ui/                 # Reusable UI components (layout, cards, stats)
+│   ├── gallery/            # Gallery-specific components (GalleryGrid)
+│   └── upload/             # Upload-specific components (UploadZone)
+└── lib/                    # Mock data used throughout the app
+demos/                      # Demo guides and templates
 ```
+
+## Available Scripts
+
+- `npm run dev` - Start the development server with Turbopack
+- `npm run build` - Build the application for production
+- `npm run start` - Start the production server
+- `npm run lint` - Run ESLint
