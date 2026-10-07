@@ -26,9 +26,10 @@ interface DownloadStatus {
 interface DownloadStatusMessageProps {
   status: DownloadStatus | null;
   variant: 'card' | 'inline';
+  onRetry: () => void;
 }
 
-function DownloadStatusMessage({ status, variant }: DownloadStatusMessageProps) {
+function DownloadStatusMessage({ status, variant, onRetry }: DownloadStatusMessageProps) {
   if (!status) {
     return null;
   }
@@ -57,6 +58,11 @@ function DownloadStatusMessage({ status, variant }: DownloadStatusMessageProps) 
         <AlertCircle className={`${variant === 'card' ? 'mt-0.5 ' : ''}h-4 w-4 flex-shrink-0`} />
       )}
       <span>{status.message}</span>
+      {!isSuccess && (
+        <button onClick={onRetry} className="font-medium underline">
+          Retry download
+        </button>
+      )}
     </div>
   );
 }
@@ -88,6 +94,7 @@ export function GalleryGrid({
   const [sessionDownloadIncrements, setSessionDownloadIncrements] = useState<Record<string, number>>({});
   const [inProgressDownloadIds, setInProgressDownloadIds] = useState<Set<string>>(new Set());
   const [downloadStatuses, setDownloadStatuses] = useState<Record<string, DownloadStatus>>({});
+  const activeDownloadIds = useRef(new Set<string>());
   const downloadStatusTimeouts = useRef<Record<string, number>>({});
 
   useEffect(() => {
@@ -152,17 +159,20 @@ export function GalleryGrid({
       [photoId]: status,
     }));
 
-    downloadStatusTimeouts.current[photoId] = window.setTimeout(() => {
-      setDownloadStatuses(prev => removeDownloadStatus(prev, photoId));
-      delete downloadStatusTimeouts.current[photoId];
-    }, DOWNLOAD_STATUS_RESET_DELAY_MS);
+    if (status.type === 'success') {
+      downloadStatusTimeouts.current[photoId] = window.setTimeout(() => {
+        setDownloadStatuses(prev => removeDownloadStatus(prev, photoId));
+        delete downloadStatusTimeouts.current[photoId];
+      }, DOWNLOAD_STATUS_RESET_DELAY_MS);
+    }
   };
 
   const handleDownload = async (photo: Photo) => {
-    if (inProgressDownloadIds.has(photo.id)) {
+    if (activeDownloadIds.current.has(photo.id)) {
       return;
     }
 
+    activeDownloadIds.current.add(photo.id);
     clearDownloadStatus(photo.id);
     setInProgressDownloadIds(prev => new Set(prev).add(photo.id));
 
@@ -174,7 +184,7 @@ export function GalleryGrid({
       }));
       setTimedDownloadStatus(photo.id, {
         type: 'success',
-        message: `${photo.title} is ready in your downloads.`,
+        message: `Download started for ${photo.title}.`,
       });
     } catch (error) {
       setTimedDownloadStatus(photo.id, {
@@ -184,6 +194,7 @@ export function GalleryGrid({
           : 'Unable to download this photo. Please try again.',
       });
     } finally {
+      activeDownloadIds.current.delete(photo.id);
       setInProgressDownloadIds(prev => {
         const next = new Set(prev);
         next.delete(photo.id);
@@ -231,7 +242,7 @@ export function GalleryGrid({
               </div>
 
               {/* Action Buttons */}
-              <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className={`absolute top-3 right-3 flex gap-2 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 ${inProgressDownloadIds.has(photo.id) ? 'opacity-100' : 'opacity-0'}`}>
                 <button
                   onClick={() => toggleLike(photo.id)}
                   className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
@@ -245,7 +256,8 @@ export function GalleryGrid({
                 <button
                   onClick={() => handleDownload(photo)}
                   disabled={inProgressDownloadIds.has(photo.id)}
-                  aria-label={`Download ${photo.title}`}
+                  aria-busy={inProgressDownloadIds.has(photo.id)}
+                  aria-label={`${inProgressDownloadIds.has(photo.id) ? 'Downloading' : 'Download'} ${photo.title}`}
                   className="p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 backdrop-blur-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {inProgressDownloadIds.has(photo.id) ? (
@@ -305,7 +317,16 @@ export function GalleryGrid({
                 </div>
               </div>
 
-              <DownloadStatusMessage status={downloadStatuses[photo.id] ?? null} variant="card" />
+              {inProgressDownloadIds.has(photo.id) && (
+                <p role="status" className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                  Preparing download...
+                </p>
+              )}
+              <DownloadStatusMessage
+                status={downloadStatuses[photo.id] ?? null}
+                variant="card"
+                onRetry={() => handleDownload(photo)}
+              />
 
               {/* Photographer */}
               {photo.photographer && (
@@ -374,6 +395,7 @@ export function GalleryGrid({
                 <button
                   onClick={() => handleDownload(selectedPhoto)}
                   disabled={inProgressDownloadIds.has(selectedPhoto.id)}
+                  aria-busy={inProgressDownloadIds.has(selectedPhoto.id)}
                   className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {inProgressDownloadIds.has(selectedPhoto.id) ? (
@@ -383,7 +405,11 @@ export function GalleryGrid({
                   )}
                   {inProgressDownloadIds.has(selectedPhoto.id) ? 'Downloading...' : 'Download Photo'}
                 </button>
-                <DownloadStatusMessage status={downloadStatuses[selectedPhoto.id] ?? null} variant="inline" />
+                <DownloadStatusMessage
+                  status={downloadStatuses[selectedPhoto.id] ?? null}
+                  variant="inline"
+                  onRetry={() => handleDownload(selectedPhoto)}
+                />
               </div>
             </div>
           </div>
