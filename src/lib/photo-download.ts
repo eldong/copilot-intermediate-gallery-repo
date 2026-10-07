@@ -56,15 +56,25 @@ export async function downloadPhoto({ url, title }: PhotoDownloadRequest): Promi
   } catch {
     throw new PhotoDownloadError(DOWNLOAD_FAILURE_MESSAGE);
   }
-  const objectUrl = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  let objectUrl: string | undefined;
+  let link: HTMLAnchorElement | undefined;
 
-  link.href = objectUrl;
-  link.download = getPhotoDownloadFileName(title, blob.type, url);
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), OBJECT_URL_REVOKE_DELAY_MS);
+  try {
+    objectUrl = window.URL.createObjectURL(blob);
+    link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = getPhotoDownloadFileName(title, blob.type, url);
+    document.body.appendChild(link);
+    link.click();
+  } catch {
+    throw new PhotoDownloadError(DOWNLOAD_FAILURE_MESSAGE);
+  } finally {
+    link?.remove();
+    if (objectUrl) {
+      const urlToRevoke = objectUrl;
+      window.setTimeout(() => window.URL.revokeObjectURL(urlToRevoke), OBJECT_URL_REVOKE_DELAY_MS);
+    }
+  }
 }
 
 function getPhotoDownloadFileName(title: string, contentType: string, sourceUrl: string): string {
